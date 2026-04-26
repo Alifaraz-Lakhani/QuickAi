@@ -5,7 +5,6 @@ import { clerkClient } from "@clerk/express";
 import axios from "axios";
 import {v2 as cloudinary} from "cloudinary";
 import fs from "fs";
-import { PDFParse } from "pdf-parse";
 
 const AI = new OpenAI({
     apiKey: process.env.GEMINI_API_KEY,
@@ -262,6 +261,7 @@ export const resumeReview = async(req, res) => {
             return res.json({success: false, message: 'Resume file size cannot exceed 5MB!'})
         }
 
+        const { PDFParse } = await import("pdf-parse");
         const dataBuffer = fs.readFileSync(resume.path)
         const parser = new PDFParse({ data: dataBuffer })
         const pdfData = await parser.getText()
