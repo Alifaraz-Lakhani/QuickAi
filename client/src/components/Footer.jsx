@@ -34,7 +34,7 @@ const Footer = () => {
             </div>
         </div>
         <p className="pt-4 text-center text-xs md:text-sm pb-5">
-            Copyright 2026 © Alifaraz. All Right Reserved.
+            Made By ALIFARAZ :)
         </p>
     </footer>
   )

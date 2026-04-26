@@ -1,4 +1,4 @@
-import { SignOutButton, useUser, useClerk } from '@clerk/react'
+import { SignOutButton, Show, useUser, useClerk } from '@clerk/react'
 import { Eraser, FileText, Hash, House, Image, LogOut, Scissors, SquarePen, Users } from 'lucide-react'
 import React from 'react'
 import { NavLink } from 'react-router-dom'
@@ -27,12 +27,12 @@ const Sidebar = ({ sidebar, setSidebar}) => {
         <img src={user.imageUrl} alt="User Avatar" className='w-13 rounded-full mx-auto'/>
         <h1 className='mt-1 text-center font-semibold'>{user.fullName}</h1>
         <div className='px-3 mt-5 text-sm text-gray-600 font-medium space-y-2'>
-            {navItems.map(({to, label, Icon})=>(
-                <NavLink key={to} to={to} end={to ==='/ai'} onClick={()=>setSidebar(false)} className={({isActive})=> `px-1.5 py-2.5 flex items-center gap-2 rounded transition-all whitespace-nowrap text-sm ${isActive ? 'bg-gradient-to-r from-[#3c81f6] to-[#9234ea] text-white' : 'hover:bg-gray-100' }`}>
+            {navItems.map((item)=>(
+                <NavLink key={item.to} to={item.to} end={item.to ==='/ai'} onClick={()=>setSidebar(false)} className={({isActive})=> `px-1.5 py-2.5 flex items-center gap-2 rounded transition-all whitespace-nowrap text-sm ${isActive ? 'bg-gradient-to-r from-[#3c81f6] to-[#9234ea] text-white' : 'hover:bg-gray-100' }`}>
                     {({isActive})=>(
                         <>
-                        <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-600'}`} />
-                        <span className='text-sm'>{label}</span>
+                        <item.Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-600'}`} />
+                        <span className='text-sm'>{item.label}</span>
                         </>
                     )}
                 </NavLink>
@@ -44,7 +44,11 @@ const Sidebar = ({ sidebar, setSidebar}) => {
             <img src={user.imageUrl} className='w-8 h-8 rounded-full flex-shrink-0' alt="" />
             <div className='min-w-0 flex-1'>
                 <p className='text-sm font-medium truncate'>{user.fullName}</p>
-                <p className='text-xs text-gray-500'>Premium Plan</p>
+                <p className='text-xs text-gray-500'>
+                    <Show when={{ plan: 'premium' }} fallback="Free Plan">
+                        Premium Plan
+                    </Show>
+                </p>
             </div>
         </div>
         <SignOutButton redirectUrl="/">
