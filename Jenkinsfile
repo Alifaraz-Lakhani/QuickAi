@@ -33,6 +33,7 @@ pipeline {
         
         stage('Deploy Containers') {
             steps {
+                // This looks for the .env in the root and ignores the error if no old containers exist
                 sh 'docker compose --env-file .env up -d'
             }
         }
