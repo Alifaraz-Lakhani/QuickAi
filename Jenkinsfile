@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'node'
+    }
+
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
     }
@@ -29,7 +33,7 @@ pipeline {
         
         stage('Deploy Containers') {
             steps {
-                sh 'docker compose up -d'
+                sh 'docker compose --env-file .env up -d'
             }
         }
     }
