@@ -16,15 +16,18 @@ services:
       quickai-network:
         aliases:
           - quickai-server
+    dns:
+      - 8.8.8.8
     volumes:
       - ./server/logs:/app/logs
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "node", "-e", "fetch('http://localhost:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" ]
+    #   test: [ "CMD", "node", "-e", "fetch('http://localhost:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" ]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 60s
 
   client:
     build:
@@ -38,6 +41,8 @@ services:
       - server
     networks:
       - quickai-network
+    dns:
+      - 8.8.8.8
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:80/" ]
@@ -81,6 +86,8 @@ services:
       - postgres
     networks:
       - quickai-network
+    dns:
+      - 8.8.8.8
     volumes:
       - sonarqube-data:/opt/sonarqube/data
       - sonarqube-extensions:/opt/sonarqube/extensions
@@ -187,6 +194,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - quickai-network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     restart: unless-stopped
     healthcheck:
       test: [ "CMD-SHELL", "wget -q --spider http://localhost:8080/login || exit 1" ]

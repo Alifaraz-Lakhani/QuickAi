@@ -21,7 +21,9 @@ app.use((req, res, next) => {
     next()
 })
 
-
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
 app.get('/', (req, res) => res.send('Server is Live!'))
 
 app.get('/metrics', (req, res) => {
