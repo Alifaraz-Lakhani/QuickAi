@@ -25,11 +25,21 @@ pipeline {
 
         stage('Build & Test') {
             parallel {
+                stage('Network Check') {
+                    steps {
+                        sh 'curl -I https://registry.npmjs.org'
+                    }
+                }
                 stage('Client Build') {
                     steps {
                         dir('client') {
-                            sh 'npm ci'
-                            sh 'npm run build'
+                            sh '''
+                            npm config set fetch-retries 5
+                            npm config set fetch-retry-mintimeout 20000
+                            npm config set fetch-retry-maxtimeout 120000
+                            npm ci
+                            npm run build
+                            '''
                         }
                     }
                 }
@@ -48,7 +58,10 @@ pipeline {
                 script {
                     def scannerHome = tool 'sonar-scanner'
                     withSonarQubeEnv('sonar-server') {
-                        sh "${scannerHome}/bin/sonar-scanner"
+                        sh """
+                        ${scannerHome}/bin/sonar-scanner \
+                        -Dsonar.login=$SONAR_AUTH_TOKEN
+                        """
                     }
                 }
             }
