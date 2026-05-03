@@ -77,9 +77,11 @@ services:
     image: sonarqube:10-community
     container_name: quickai-sonarqube
     environment:
-      SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/sonar
+      SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/quickai_db
       SONAR_JDBC_USERNAME: ${POSTGRES_USER:-quickai}
       SONAR_JDBC_PASSWORD: ${POSTGRES_PASSWORD:-quickai123}
+      SONAR_WEB_JAVAADDITIONALOPTS: "-Xmx2g -Xms512m"
+      SONAR_CE_JAVAADDITIONALOPTS: "-Xmx2g -Xms512m"
     ports:
       - "9000:9000"
     depends_on:
@@ -91,6 +93,8 @@ services:
     volumes:
       - sonarqube-data:/opt/sonarqube/data
       - sonarqube-extensions:/opt/sonarqube/extensions
+    mem_limit: 3g
+    memswap_limit: 3g
     restart: unless-stopped
 
   # ==================== MONITORING - PROMETHEUS ====================
