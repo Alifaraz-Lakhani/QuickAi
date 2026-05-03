@@ -13,9 +13,8 @@ RUN npm install
 # 5. Copy the rest of the server code
 COPY . .
 
-# 6. Expose the port your server uses
-# (Check your server.js; usually it's 4000 or 5000)
-EXPOSE 4000
+# 6. Expose the port the Express server listens on
+EXPOSE 3000
 
 # 7. Start the application
 CMD ["npm", "start"]

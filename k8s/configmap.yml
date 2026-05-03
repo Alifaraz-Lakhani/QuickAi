@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quickai-config
+  namespace: quickai
+data:
+  NODE_ENV: production
+  PORT: "3000"
+  CLIENT_PORT: "80"
+  LOG_LEVEL: info

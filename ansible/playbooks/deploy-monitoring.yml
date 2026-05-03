@@ -1,0 +1,45 @@
+---
+- name: Deploy Monitoring Stack on Kubernetes
+  hosts: kubernetes_master
+  vars:
+    namespace: monitoring
+  
+  tasks:
+    - name: Create monitoring namespace
+      shell: kubectl create namespace {{ namespace }} --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Add Prometheus Helm repository
+      shell: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+
+    - name: Add Grafana Helm repository
+      shell: helm repo add grafana https://grafana.github.io/helm-charts
+
+    - name: Update Helm repositories
+      shell: helm repo update
+
+    - name: Deploy Prometheus
+      shell: |
+        helm install prometheus prometheus-community/kube-prometheus-stack \
+          --namespace {{ namespace }} \
+          --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false \
+          --set grafana.adminPassword=admin123
+      ignore_errors: yes
+
+    - name: Add Loki Helm repository
+      shell: helm repo add grafana https://grafana.github.io/helm-charts
+
+    - name: Deploy Loki
+      shell: |
+        helm install loki grafana/loki-stack \
+          --namespace {{ namespace }}
+      ignore_errors: yes
+
+    - name: Create port-forward for Grafana
+      shell: |
+        kubectl port-forward -n {{ namespace }} svc/prometheus-grafana 3000:80 &
+        echo "Grafana accessible at http://localhost:3000"
+
+    - name: Create port-forward for Prometheus
+      shell: |
+        kubectl port-forward -n {{ namespace }} svc/prometheus-kube-prometheus-prometheus 9090:9090 &
+        echo "Prometheus accessible at http://localhost:9090"

@@ -1,3 +1,8 @@
 # Dependencies
 node_modules
 .env
+.md
+client/node_modules/
+server/node_modules/
+.tmp-tools/
+.scannerwork/

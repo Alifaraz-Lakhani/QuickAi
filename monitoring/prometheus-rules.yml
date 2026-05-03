@@ -1,0 +1,33 @@
+groups:
+  - name: quickai-local.rules
+    interval: 30s
+    rules:
+      - alert: QuickAiBackendDown
+        expr: up{job="quickai-server"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: quickai-server
+        annotations:
+          summary: QuickAi backend is down
+          description: Prometheus cannot scrape the QuickAi backend metrics endpoint.
+
+      - alert: LokiDown
+        expr: up{job="loki"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          service: loki
+        annotations:
+          summary: Loki is down
+          description: Prometheus cannot scrape Loki metrics.
+
+      - alert: QuickAiHighHeapUsage
+        expr: quickai_process_memory_heap_used_bytes > 300000000
+        for: 5m
+        labels:
+          severity: warning
+          service: quickai-server
+        annotations:
+          summary: QuickAi backend heap usage is high
+          description: QuickAi backend heap usage is above 300 MB.

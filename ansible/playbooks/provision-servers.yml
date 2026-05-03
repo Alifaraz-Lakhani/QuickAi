@@ -1,0 +1,138 @@
+---
+- name: Provision Servers and Install Prerequisites
+  hosts: kubernetes_cluster
+  become: yes
+  vars:
+    docker_version: "24.0"
+    kubernetes_version: "1.28"
+  
+  tasks:
+    - name: Update system packages
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Install required packages
+      apt:
+        name:
+          - curl
+          - wget
+          - git
+          - htop
+          - ntp
+          - net-tools
+          - ca-certificates
+          - gnupg
+          - lsb-release
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install Docker
+      block:
+        - name: Add Docker repository key
+          apt_key:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            state: present
+        
+        - name: Add Docker repository
+          apt_repository:
+            repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+            state: present
+        
+        - name: Install Docker
+          apt:
+            name: "docker-ce={{ docker_version }}*"
+            state: present
+        
+        - name: Start Docker service
+          systemd:
+            name: docker
+            enabled: yes
+            state: started
+      when: ansible_os_family == "Debian"
+
+    - name: Install Kubernetes
+      block:
+        - name: Add Kubernetes repository key
+          apt_key:
+            url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+            state: present
+        
+        - name: Add Kubernetes repository
+          apt_repository:
+            repo: "deb https://apt.kubernetes.io/ kubernetes-xenial main"
+            state: present
+        
+        - name: Install kubelet, kubeadm, kubectl
+          apt:
+            name:
+              - "kubelet={{ kubernetes_version }}*"
+              - "kubeadm={{ kubernetes_version }}*"
+              - "kubectl={{ kubernetes_version }}*"
+            state: present
+        
+        - name: Enable kubelet service
+          systemd:
+            name: kubelet
+            enabled: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Setup Kubernetes Master
+      block:
+        - name: Initialize Kubernetes cluster
+          shell: kubeadm init --pod-network-cidr=10.244.0.0/16
+          register: kubeadm_init
+          ignore_errors: yes
+
+        - name: Create .kube directory
+          file:
+            path: /root/.kube
+            state: directory
+
+        - name: Copy admin config
+          shell: cp /etc/kubernetes/admin.conf /root/.kube/config
+          when: kubeadm_init.rc == 0
+
+        - name: Install Flannel network plugin
+          shell: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+          environment:
+            KUBECONFIG: /root/.kube/config
+          when: kubeadm_init.rc == 0
+      when: inventory_hostname in groups['kubernetes_master']
+
+    - name: Setup Kubernetes Workers
+      block:
+        - name: Get join token from master
+          shell: kubeadm token create --print-join-command
+          register: join_command
+          delegate_to: k8s_master
+          run_once: yes
+
+        - name: Join worker to cluster
+          shell: "{{ hostvars['k8s_master']['join_command'].stdout }}"
+          when: hostvars['k8s_master']['join_command'] is defined
+      when: inventory_hostname in groups['kubernetes_workers']
+
+    - name: Configure firewall for Kubernetes
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "6443"
+        - "2379"
+        - "2380"
+        - "10250"
+        - "10251"
+        - "10252"
+      when: ansible_os_family == "Debian"
+
+    - name: Disable swap
+      shell: swapoff -a
+
+    - name: Create container registry credentials (optional)
+      shell: |
+        docker login -u {{ registry_username }} -p {{ registry_password }} {{ registry_url }}
+      when: registry_username is defined
+      no_log: yes

@@ -1,0 +1,46 @@
+{
+  "uid": "quickai-overview",
+  "title": "QuickAi Overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "API Requests",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "expr": "quickai_http_requests_total"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "API Uptime",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "expr": "quickai_process_uptime_seconds"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Heap Memory",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "expr": "quickai_process_memory_heap_used_bytes"
+        }
+      ]
+    }
+  ]
+}

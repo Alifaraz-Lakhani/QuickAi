@@ -1,0 +1,210 @@
+services:
+  # ==================== APPLICATION ====================
+  server:
+    build: ./server
+    container_name: quickai-server
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./server/.env
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3000
+    depends_on:
+      - postgres
+    networks:
+      quickai-network:
+        aliases:
+          - quickai-server
+    volumes:
+      - ./server/logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "node", "-e", "fetch('http://localhost:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  client:
+    build:
+      context: ./client
+      args:
+        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY}
+    container_name: quickai-client
+    ports:
+      - "5173:80"
+    depends_on:
+      - server
+    networks:
+      - quickai-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:80/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ==================== DATABASE ====================
+  postgres:
+    image: postgres:16-alpine
+    container_name: quickai-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-quickai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-quickai123}
+      POSTGRES_DB: ${POSTGRES_DB:-quickai_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - quickai-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-quickai}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== CODE QUALITY ====================
+  sonarqube:
+    image: sonarqube:10-community
+    container_name: quickai-sonarqube
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/sonar
+      SONAR_JDBC_USERNAME: ${POSTGRES_USER:-quickai}
+      SONAR_JDBC_PASSWORD: ${POSTGRES_PASSWORD:-quickai123}
+    ports:
+      - "9000:9000"
+    depends_on:
+      - postgres
+    networks:
+      - quickai-network
+    volumes:
+      - sonarqube-data:/opt/sonarqube/data
+      - sonarqube-extensions:/opt/sonarqube/extensions
+    restart: unless-stopped
+
+  # ==================== MONITORING - PROMETHEUS ====================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: quickai-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus-config.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus-rules.yml:/etc/prometheus/rules/prometheus-rules.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    networks:
+      - quickai-network
+    restart: unless-stopped
+    depends_on:
+      - server
+
+  # ==================== MONITORING - GRAFANA ====================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: quickai-grafana
+    ports:
+      - "4000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - quickai-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  # ==================== MONITORING - LOKI (Logs) ====================
+  loki:
+    image: grafana/loki:latest
+    container_name: quickai-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - quickai-network
+    restart: unless-stopped
+
+  # ==================== MONITORING - PROMTAIL (Log Forwarder) ====================
+  promtail:
+    image: grafana/promtail:latest
+    container_name: quickai-promtail
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - quickai-network
+    restart: unless-stopped
+    depends_on:
+      - loki
+
+  # ==================== ALERTING - ALERTMANAGER ====================
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: quickai-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager-config.yml:/etc/alertmanager/config.yml
+      - alertmanager-data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - quickai-network
+    restart: unless-stopped
+
+  # ==================== JENKINS (CI/CD) ====================
+  jenkins:
+    build: ./jenkins
+    image: quickai-jenkins:lts
+    container_name: quickai-jenkins
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    environment:
+      JENKINS_OPTS: "--httpPort=8080"
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - quickai-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q --spider http://localhost:8080/login || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  quickai-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+  alertmanager-data:
+  sonarqube-data:
+  sonarqube-extensions:
+  jenkins-data:
