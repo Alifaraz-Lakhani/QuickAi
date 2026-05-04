@@ -61,15 +61,15 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 script {
-                    echo "Scanning complete. Proceeding to Docker build."
-                    // def scannerHome = tool 'sonar-scanner'
-                    // withSonarQubeEnv('sonar-server') {
-                    //     sh """
-                    //         export SONAR_SCANNER_OPTS="-Xmx1g -Xms512m"
-                    //         ${scannerHome}/bin/sonar-scanner \
-                    //         -Dsonar.login=$SONAR_AUTH_TOKEN
-                    //     """
-                    // }
+                    // echo "Scanning complete. Proceeding to Docker build."
+                    def scannerHome = tool 'sonar-scanner'
+                    withSonarQubeEnv('sonar-server') {
+                        sh """
+                            export SONAR_SCANNER_OPTS="-Xmx1g -Xms512m"
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.login=$SONAR_AUTH_TOKEN
+                        """
+                    }
                 }
             }
         }
@@ -152,6 +152,7 @@ pipeline {
                         kubectl apply -f k8s/configmap.yml
 
                         echo "=== Creating Secrets ==="
+                        # Use printf to safely handle special characters in DATABASE_URL
                         kubectl -n "$K8S_NAMESPACE" create secret generic quickai-server-secrets \
                           --from-literal=CLERK_SECRET_KEY="$CLERK_SECRET_KEY" \
                           --from-literal=GEMINI_API_KEY="$GEMINI_API_KEY" \
@@ -159,8 +160,12 @@ pipeline {
                           --from-literal=CLOUDINARY_CLOUD_NAME="$CLOUDINARY_CLOUD_NAME" \
                           --from-literal=CLOUDINARY_API_KEY="$CLOUDINARY_API_KEY" \
                           --from-literal=CLOUDINARY_API_SECRET="$CLOUDINARY_API_SECRET" \
-                          --from-literal=DATABASE_URL="$DATABASE_URL" \
+                          --from-literal="DATABASE_URL=$(printf '%s' "$DATABASE_URL")" \
                           --dry-run=client -o yaml | kubectl apply -f -
+                        
+                        echo "=== Verifying Secrets ==="
+                        kubectl -n "$K8S_NAMESPACE" get secrets quickai-server-secrets -o jsonpath='{.data.DATABASE_URL}' | base64 -d | head -c 100
+                        echo ""  # newline
 
                         echo "=== Applying Deployments ==="
                         kubectl apply -f k8s/server-deployment.yml
