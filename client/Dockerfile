@@ -4,8 +4,9 @@ WORKDIR /app
 
 # Copy package files and install dependencies FIRST (Good for caching)
 COPY package*.json ./
-# Use --mount for npm cache optimization (requires BUILDKIT)
-RUN --mount=type=cache,target=/root/.npm npm install
+
+# RUN --mount=type=cache,target=/root/.npm npm install
+RUN npm install
 
 # NOW Copy the rest of the source code
 COPY . .
