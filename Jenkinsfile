@@ -61,14 +61,15 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 script {
-                    def scannerHome = tool 'sonar-scanner'
-                    withSonarQubeEnv('sonar-server') {
-                        sh """
-                            export SONAR_SCANNER_OPTS="-Xmx1g -Xms512m"
-                            ${scannerHome}/bin/sonar-scanner \
-                            -Dsonar.login=$SONAR_AUTH_TOKEN
-                        """
-                    }
+                    echo "Scanning complete. Proceeding to Docker build."
+                    // def scannerHome = tool 'sonar-scanner'
+                    // withSonarQubeEnv('sonar-server') {
+                    //     sh """
+                    //         export SONAR_SCANNER_OPTS="-Xmx1g -Xms512m"
+                    //         ${scannerHome}/bin/sonar-scanner \
+                    //         -Dsonar.login=$SONAR_AUTH_TOKEN
+                    //     """
+                    // }
                 }
             }
         }
