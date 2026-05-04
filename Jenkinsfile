@@ -72,7 +72,7 @@ pipeline {
         stage('Quality Gate') {
             steps {
                 // timeout(time:20, unit : 'MINUTES'){waitForQualityGate abortPipeline: true }
-                // script {
+                script {
                     echo "Skipping Quality Gate - SonarQube resources insufficient for large analysis"
                     echo "Analysis complete. Proceeding to Docker build."
                 }
