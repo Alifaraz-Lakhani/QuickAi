@@ -4,7 +4,7 @@ pipeline {
     environment {
         KUBECONFIG = '/var/jenkins_home/.kube/config'
         REGISTRY = credentials('docker-registry-url')
-        IMAGE_TAG = "${BUILD_NUMBER}"
+        IMAGE_TAG = "${GIT_COMMIT.take(7)}"
         CLIENT_IMAGE = "${REGISTRY}/quickai-client"
         SERVER_IMAGE = "${REGISTRY}/quickai-server"
         K8S_NAMESPACE = 'quickai'
@@ -65,9 +65,10 @@ pipeline {
                     def scannerHome = tool 'sonar-scanner'
                     withSonarQubeEnv('sonar-server') {
                         sh """
-                            export SONAR_SCANNER_OPTS="-Xmx1g -Xms512m"
+                            export SONAR_SCANNER_OPTS="-Xmx512m -Xms256m"
                             ${scannerHome}/bin/sonar-scanner \
-                            -Dsonar.login=$SONAR_AUTH_TOKEN
+                            -Dsonar.login=$SONAR_AUTH_TOKEN \
+                            -Dsonar.javascript.node.maxspace=1024
                         """
                     }
                 }
@@ -162,15 +163,19 @@ pipeline {
                           --from-literal=CLOUDINARY_API_SECRET="$CLOUDINARY_API_SECRET" \
                           --from-literal="DATABASE_URL=$(printf '%s' "$DATABASE_URL")" \
                           --dry-run=client -o yaml | kubectl apply -f -
-                        
-                        echo "=== Verifying Secrets ==="
-                        kubectl -n "$K8S_NAMESPACE" get secrets quickai-server-secrets -o jsonpath='{.data.DATABASE_URL}' | base64 -d | head -c 100
-                        echo ""  # newline
 
                         echo "=== Applying Deployments ==="
                         kubectl apply -f k8s/server-deployment.yml
                         kubectl apply -f k8s/client-deployment.yml
-                        kubectl apply -f k8s/ingress.yml
+                        
+                        echo "=== Applying Ingress ==="
+                        # Only apply ingress if it doesn't exist to avoid unnecessary updates
+                        if ! kubectl -n "$K8S_NAMESPACE" get ingress quickai-ingress 2>/dev/null; then
+                          kubectl apply -f k8s/ingress.yml
+                          echo "✓ Ingress created"
+                        else
+                          echo "✓ Ingress already exists, skipping"
+                        fi
 
                         echo "=== Updating Image Tags ==="
                         kubectl -n "$K8S_NAMESPACE" set image deployment/quickai-server server="$SERVER_IMAGE:$IMAGE_TAG"
