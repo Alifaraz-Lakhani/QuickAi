@@ -7,8 +7,8 @@ WORKDIR /app
 # 3. Copy package files first (helps with Docker caching)
 COPY package*.json ./
 
-# 4. Install dependencies
-RUN npm install
+# 4. Install dependencies (with npm cache mount for faster rebuilds)
+RUN --mount=type=cache,target=/root/.npm npm install
 
 # 5. Copy the rest of the server code
 COPY . .
