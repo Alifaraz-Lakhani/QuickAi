@@ -59,6 +59,7 @@ pipeline {
                     def scannerHome = tool 'sonar-scanner'
                     withSonarQubeEnv('sonar-server') {
                         sh """
+                        export SONAR_SCANNER_OPTS="-Xmx1g -Xms512m"
                         ${scannerHome}/bin/sonar-scanner \
                         -Dsonar.login=$SONAR_AUTH_TOKEN
                         """
