@@ -13,7 +13,7 @@ pipeline {
         CLIENT_IMAGE = "${REGISTRY}/quickai-client"
         SERVER_IMAGE = "${REGISTRY}/quickai-server"
         K8S_NAMESPACE = 'quickai'
-        DOCKER_BUILDKIT = '1'
+        // DOCKER_BUILDKIT = '1'
         NPM_CONFIG_CACHE = '/tmp/.npm'
         DOCKER_BUILDKIT = '0'
     }
