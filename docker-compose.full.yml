@@ -185,6 +185,8 @@ services:
 
   # ==================== JENKINS (CI/CD) ====================
   jenkins:
+    extra_hosts:
+      - "kubernetes.docker.internal:host-gateway"
     build: ./jenkins
     image: quickai-jenkins:lts
     container_name: quickai-jenkins
