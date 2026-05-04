@@ -15,6 +15,7 @@ pipeline {
         K8S_NAMESPACE = 'quickai'
         DOCKER_BUILDKIT = '1'
         NPM_CONFIG_CACHE = '/tmp/.npm'
+        DOCKER_BUILDKIT = '0'
     }
 
     stages {
