@@ -4,7 +4,7 @@ pipeline {
     environment {
         KUBECONFIG = '/var/jenkins_home/.kube/config'
         REGISTRY = credentials('docker-registry-url')
-        IMAGE_TAG = "${GIT_COMMIT.take(7)}"
+        IMAGE_TAG = "${BUILD_NUMBER}"
         CLIENT_IMAGE = "${REGISTRY}/quickai-client"
         SERVER_IMAGE = "${REGISTRY}/quickai-server"
         K8S_NAMESPACE = 'quickai'
@@ -26,34 +26,30 @@ pipeline {
             }
         }
 
-        stage('Build & Test') {
-            parallel {
-                stage('Network Check') {
-                    steps {
-                        sh 'curl -I https://registry.npmjs.org'
-                    }
-                }
+        // stage('Network Check') {
+        //     steps {
+        //         sh 'curl -I https://registry.npmjs.org'
+        //     }
+        // }
 
-                stage('Client Build') {
-                    steps {
-                        dir('client') {
-                            sh '''
-                                npm config set fetch-retries 5
-                                npm config set fetch-retry-mintimeout 20000
-                                npm config set fetch-retry-maxtimeout 120000
-                                npm ci --prefer-offline
-                                npm run build
-                            '''
-                        }
-                    }
+        stage('Client Build') {
+            steps {
+                dir('client') {
+                    sh '''
+                        npm config set fetch-retries 5
+                        npm config set fetch-retry-mintimeout 20000
+                        npm config set fetch-retry-maxtimeout 120000
+                        npm ci --prefer-offline
+                        npm run build
+                    '''
                 }
+            }
+        }
 
-                stage('Server Install') {
-                    steps {
-                        dir('server') {
-                            sh 'npm ci --prefer-offline'
-                        }
-                    }
+        stage('Server Install') {
+            steps {
+                dir('server') {
+                    sh 'npm ci --prefer-offline'
                 }
             }
         }
@@ -61,14 +57,12 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 script {
-                    // echo "Scanning complete. Proceeding to Docker build."
                     def scannerHome = tool 'sonar-scanner'
                     withSonarQubeEnv('sonar-server') {
                         sh """
-                            export SONAR_SCANNER_OPTS="-Xmx512m -Xms256m"
+                            export SONAR_SCANNER_OPTS="-Xmx1g -Xms512m"
                             ${scannerHome}/bin/sonar-scanner \
-                            -Dsonar.login=$SONAR_AUTH_TOKEN \
-                            -Dsonar.javascript.node.maxspace=1024
+                            -Dsonar.login=$SONAR_AUTH_TOKEN
                         """
                     }
                 }
@@ -77,10 +71,7 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-                script {
-                    echo "Skipping Quality Gate - SonarQube resources insufficient for large analysis"
-                    echo "Analysis complete. Proceeding to Docker build."
-                }
+                echo "Skipping Quality Gate - SonarQube resources insufficient"
             }
         }
 
@@ -144,7 +135,6 @@ pipeline {
 
                         echo "=== Testing Kubernetes Connection ==="
                         kubectl cluster-info
-                        echo "✓ Kubernetes connection successful"
 
                         echo "=== Creating Namespace ==="
                         kubectl apply -f k8s/namespace.yml
@@ -153,7 +143,6 @@ pipeline {
                         kubectl apply -f k8s/configmap.yml
 
                         echo "=== Creating Secrets ==="
-                        # Use printf to safely handle special characters in DATABASE_URL
                         kubectl -n "$K8S_NAMESPACE" create secret generic quickai-server-secrets \
                           --from-literal=CLERK_SECRET_KEY="$CLERK_SECRET_KEY" \
                           --from-literal=GEMINI_API_KEY="$GEMINI_API_KEY" \
@@ -167,25 +156,15 @@ pipeline {
                         echo "=== Applying Deployments ==="
                         kubectl apply -f k8s/server-deployment.yml
                         kubectl apply -f k8s/client-deployment.yml
-                        
-                        echo "=== Applying Ingress ==="
-                        # Only apply ingress if it doesn't exist to avoid unnecessary updates
-                        if ! kubectl -n "$K8S_NAMESPACE" get ingress quickai-ingress 2>/dev/null; then
-                          kubectl apply -f k8s/ingress.yml
-                          echo "✓ Ingress created"
-                        else
-                          echo "✓ Ingress already exists, skipping"
-                        fi
+                        kubectl apply -f k8s/ingress.yml
 
-                        echo "=== Updating Image Tags ==="
+                        echo "=== Updating Images ==="
                         kubectl -n "$K8S_NAMESPACE" set image deployment/quickai-server server="$SERVER_IMAGE:$IMAGE_TAG"
                         kubectl -n "$K8S_NAMESPACE" set image deployment/quickai-client client="$CLIENT_IMAGE:$IMAGE_TAG"
 
                         echo "=== Waiting for Rollout ==="
                         kubectl -n "$K8S_NAMESPACE" rollout status deployment/quickai-server --timeout=180s
                         kubectl -n "$K8S_NAMESPACE" rollout status deployment/quickai-client --timeout=180s
-
-                        echo "✓ Kubernetes deployment successful"
                     '''
                 }
             }
