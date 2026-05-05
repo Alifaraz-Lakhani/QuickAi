@@ -8,7 +8,7 @@ if (!databaseUrl) {
 }
 
 // Trim whitespace and validate URL
-const trimmedUrl = databaseUrl.trim();
+const trimmedUrl = databaseUrl.trim().replace(/^['"]|['"]$/g, '');
 
 // Validate that it looks like a valid PostgreSQL connection string
 if (!trimmedUrl.startsWith('postgresql://') && !trimmedUrl.startsWith('postgres://')) {
