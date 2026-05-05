@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        KUBECONFIG = '/var/jenkins_home/.kube/config'
+        // KUBECONFIG = '/var/jenkins_home/.kube/config'
         REGISTRY = credentials('docker-registry-url')
         IMAGE_TAG = "${GIT_COMMIT.take(7)}"
         CLIENT_IMAGE = "${REGISTRY}/quickai-client"
@@ -222,6 +222,7 @@ pipeline {
                         export KUBECONFIG="/tmp/kubeconfig-fixed"
                         
                         echo "=== Testing Kubernetes Connection ==="
+                        echo $KUBECONFIG
                         kubectl cluster-info
 
                         echo "=== Creating Namespace ==="
