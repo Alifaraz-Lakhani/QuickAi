@@ -23,6 +23,8 @@ RUN npm run build
 
 # 2. Production stage
 FROM nginx:stable-alpine
+# Install curl for healthchecks
+RUN apk add --no-cache curl
 # Verify your vite config output folder is 'dist' (standard for Vite)
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf

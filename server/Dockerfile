@@ -1,21 +1,24 @@
 # 1. Use a lightweight Node.js image
 FROM node:20-alpine
 
-# 2. Create and set the working directory
+# 2. Install curl for healthchecks
+RUN apk add --no-cache curl
+
+# 3. Create and set the working directory
 WORKDIR /app
 
-# 3. Copy package files first (helps with Docker caching)
+# 4. Copy package files first (helps with Docker caching)
 COPY package*.json ./
 
-# 4. Install dependencies (with npm cache mount for faster rebuilds)
+# 5. Install dependencies (with npm cache mount for faster rebuilds)
 # RUN --mount=type=cache,target=/root/.npm npm install
 RUN npm install
 
-# 5. Copy the rest of the server code
+# 6. Copy the rest of the server code
 COPY . .
 
-# 6. Expose the port the Express server listens on
+# 7. Expose the port the Express server listens on
 EXPOSE 3000
 
-# 7. Start the application
+# 8. Start the application
 CMD ["npm", "start"]
