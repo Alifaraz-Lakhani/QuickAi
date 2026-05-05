@@ -215,8 +215,12 @@ pipeline {
                 ]) {
                     sh '''
                         set -e
-                        export KUBECONFIG="$KUBECONFIG_FILE"
-
+                        
+                        # Fix kubeconfig for Docker container: replace Docker Desktop internal IP with host.docker.internal
+                        # This allows Jenkins container to reach Docker Desktop Kubernetes API server
+                        sed 's/172.19.0.2/host.docker.internal/g' "$KUBECONFIG_FILE" > /tmp/kubeconfig-fixed
+                        export KUBECONFIG="/tmp/kubeconfig-fixed"
+                        
                         echo "=== Testing Kubernetes Connection ==="
                         kubectl cluster-info
 
