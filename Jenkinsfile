@@ -70,10 +70,19 @@ pipeline {
         }
 
         stage('Quality Gate') {
-            steps {
-                echo "Skipping Quality Gate - SonarQube resources insufficient"
+    steps {
+        timeout(time: 10, unit: 'MINUTES') {
+            script {
+                def qg = waitForQualityGate()
+                
+
+                if (qg.status == 'OK') {
+                    echo "Quality Gate Status: ${qg.status}"
+                }
             }
         }
+    }
+}
 
         stage('Build Docker Images') {
             steps {
