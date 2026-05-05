@@ -57,16 +57,17 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 script {
-                    def scannerHome = tool 'sonar-scanner'
-                    withSonarQubeEnv('sonar-server') {
-                        sh """
-                            echo "Scanning done"
-                            // export SONAR_SCANNER_OPTS="-Xmx512m -Xms256m"
-                            // ${scannerHome}/bin/sonar-scanner \
-                            // -Dsonar.login=$SONAR_AUTH_TOKEN \
-                            // -Dsonar.javascript.node.maxspace=1024
-                        """
-                    }
+                    echo "Scanning done"
+                    // def scannerHome = tool 'sonar-scanner'
+                    // withSonarQubeEnv('sonar-server') {
+                    //     sh """
+                            
+                    //         export SONAR_SCANNER_OPTS="-Xmx512m -Xms256m"
+                    //         ${scannerHome}/bin/sonar-scanner \
+                    //         -Dsonar.login=$SONAR_AUTH_TOKEN \
+                    //         -Dsonar.javascript.node.maxspace=1024
+                    //     """
+                    // }
                 }
             }
         }
