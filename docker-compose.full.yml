@@ -77,7 +77,7 @@ services:
     image: sonarqube:10-community
     container_name: quickai-sonarqube
     environment:
-      SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/quickai_db
+      SONAR_JDBC_URL: jdbc:postgresql://quickai-db:5432/quickai
       SONAR_JDBC_USERNAME: ${POSTGRES_USER:-quickai}
       SONAR_JDBC_PASSWORD: ${POSTGRES_PASSWORD:-quickai123}
       SONAR_WEB_JAVAADDITIONALOPTS: "-Xmx2g -Xms1g"
